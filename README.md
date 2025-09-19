@@ -18,4 +18,3 @@ Currently in a **proof-of-concept** state. This version can fetch the latest ite
 - Configurable notification schedule
 - Cross-platform system notifications
 - Option to mark items as read or ignored
-

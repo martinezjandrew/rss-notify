@@ -1,19 +1,6 @@
-use chrono::Utc;
 use tokio::time::{sleep_until, Instant, Duration};
 use tokio_cron_scheduler::{Job, JobScheduler};
-use notify_rust::Notification;
-use std::error::Error;
-use rss::Channel;
-use open;
-
-async fn example_feed() -> Result<Channel, Box<dyn Error>> {
-    let content = reqwest::get("https://archlinux.org/feeds/news/")
-        .await?
-        .bytes()
-        .await?;
-    let channel = Channel::read_from(&content[..])?;
-    Ok(channel)
-}
+use rss_notify::{get_feed, send_notify};
 
 #[tokio::main]
 async fn main() {
@@ -24,27 +11,10 @@ async fn main() {
         .add(
             Job::new_async("0 * * * * *", |_uuid, _locked| {
                 Box::pin(async move {
-                    let feed = example_feed().await.unwrap();
-                    let latest_item = feed.items().get(0);
+                    let feed_link = "https://archlinux.org/feeds/news/";
+                    let feed = get_feed(feed_link).await.unwrap();
 
-                    let title = latest_item.expect("REASON").title().unwrap();
-                    let description = latest_item.expect("REASON").description().unwrap();
-                    let link = latest_item.expect("REASON").link().unwrap();
-
-
-
-                    println!("Task executed at: {}", Utc::now());
-                    Notification::new()
-                        .summary(title)
-                        .body(description)
-                        .action("default", "default")
-                        .show()
-                        .unwrap()
-                        .wait_for_action(|action| match action {
-                            "default" => open::that(link).expect("REASON"),
-                            "__closed" => println!("the notification was closed"),
-                            _ => ()
-                        });
+                    send_notify(&feed);
                 })
             })
             .unwrap(),

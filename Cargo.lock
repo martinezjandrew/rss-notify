@@ -3,19 +3,6 @@
 version = 4
 
 [[package]]
-name = "RSS-Notify"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "notify-rust",
- "open",
- "reqwest",
- "rss",
- "tokio",
- "tokio-cron-scheduler",
-]
-
-[[package]]
 name = "addr2line"
 version = "0.24.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1501,6 +1488,19 @@ dependencies = [
  "derive_builder",
  "never",
  "quick-xml",
+]
+
+[[package]]
+name = "rss-notify"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "notify-rust",
+ "open",
+ "reqwest",
+ "rss",
+ "tokio",
+ "tokio-cron-scheduler",
 ]
 
 [[package]]

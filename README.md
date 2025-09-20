@@ -2,6 +2,9 @@
 
 Schedule system notifications for your favorite RSS feeds!
 
+<img width="313" height="170" alt="image" src="https://github.com/user-attachments/assets/890f655d-20da-4d8b-927b-c2b64c473f8d" />
+
+
 Created by: Andrew Martinez
 
 ## Description

@@ -12,3 +12,4 @@ notify-rust = "4"
 rss = "2"
 reqwest = { version = "0.12", features = ["json"] }
 open = "5"
+html2text = "0.15.5"

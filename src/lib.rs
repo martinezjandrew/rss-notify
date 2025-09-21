@@ -3,6 +3,8 @@ use rss::Channel;
 use notify_rust::Notification;
 use chrono::Utc;
 use html2text::from_read;
+use serde::Deserialize;
+use toml;
 
 pub async fn get_feed(link: &str) -> Result<Channel, Box<dyn Error>> {
     let content = reqwest::get(link)
@@ -54,6 +56,22 @@ fn create_body(title: &str, description: &str) -> String {
     )
 }
 
+#[derive(Deserialize)]
+pub struct Config {
+    feeds: Vec<String>,
+}
+
+pub fn load() -> Config {
+    let config: Config = toml::from_str(r#"
+        feeds = ["https://archlinux.org/feeds/news/"]
+    "#).unwrap();
+
+    config
+}
+
+
+
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -65,5 +83,11 @@ mod tests {
         let feed = get_feed(feed_link).await.unwrap();
 
         send_notify(&feed);
+    }
+    #[test]
+    fn load_config() {
+        let config = load();
+
+        assert_eq!(config.feeds, ["https://archlinux.org/feeds/news/"]);
     }
 }

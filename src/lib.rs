@@ -56,17 +56,37 @@ fn create_body(title: &str, description: &str) -> String {
     )
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
+pub struct Feed {
+    link: String,
+    schedule: String,
+}
+
+#[derive(Debug, Deserialize)]
 pub struct Config {
-    feeds: Vec<String>,
+    feeds: Vec<Feed>,
 }
 
 pub fn load() -> Config {
     let config: Config = toml::from_str(r#"
-        feeds = ["https://archlinux.org/feeds/news/"]
+        feeds = [{link = "https://archlinux.org/feeds/news/",schedule = "0/5 * * * * *"}]
     "#).unwrap();
 
     config
+}
+
+// function will update the "last_read" item for a feed
+pub fn save_data() -> String {
+    let mut data = String::new();
+    data.push_str("NOT IMPLEMENTED YET!");
+    data
+}
+
+// function will grab the "last_read" item from a feed
+pub fn load_data() -> String {
+    let mut data = String::new();
+    data.push_str("NOT IMPLEMENTED YET!");
+    data
 }
 
 
@@ -86,8 +106,9 @@ mod tests {
     }
     #[test]
     fn load_config() {
-        let config = load();
+        let config: Config = load();
 
-        assert_eq!(config.feeds, ["https://archlinux.org/feeds/news/"]);
+        assert_eq!(config.feeds[0].link, "https://archlinux.org/feeds/news/");
+        assert_eq!(config.feeds[0].schedule, "0/5 * * * * *");
     }
 }

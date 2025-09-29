@@ -75,6 +75,14 @@ impl Config {
         };
         self.feeds.push(new_feed);
     }
+    fn remove_feed(&mut self, index: usize) -> Result<(), &'static str> {
+        if index >= self.feeds.len() && index < 0 {
+            Err("Feed index is out of bounds.")
+        } else {
+            self.feeds.remove(index);
+            Ok(())
+        }
+    }
     fn list_feeds(self) -> String {
         let feed_iter = self.feeds.iter();
 
@@ -140,6 +148,16 @@ mod tests {
         let schedule = "0/5 * * * * *";
         config.add_feed(&url, &schedule);
         assert_eq!(config.feeds[1].link, "https://feeds.npr.org/1001/rss.xml");
+    }
+    #[test]
+    fn remove_feed_from_config() {
+        let mut config: Config = load();
+        let url = "https://feeds.npr.org/1001/rss.xml";
+        let schedule = "0/5 * * * * *";
+        config.add_feed(&url, &schedule);
+        assert_eq!(config.feeds.len(), 2);
+        config.remove_feed(1);
+        assert_eq!(config.feeds.len(), 1);
     }
     #[test]
     fn list_feeds() {

@@ -75,6 +75,18 @@ impl Config {
         };
         self.feeds.push(new_feed);
     }
+    fn list_feeds(self) -> String {
+        let feed_iter = self.feeds.iter();
+
+        let mut output = String::new();
+
+        for (i, feed) in feed_iter.enumerate() {
+            let line = format!("{}: {} - {}", i, &feed.link, &feed.schedule);
+            output.push_str(&line);
+        }
+
+        output
+    }
 }
 
 pub fn load() -> Config {
@@ -128,5 +140,11 @@ mod tests {
         let schedule = "0/5 * * * * *";
         config.add_feed(&url, &schedule);
         assert_eq!(config.feeds[1].link, "https://feeds.npr.org/1001/rss.xml");
+    }
+    #[test]
+    fn list_feeds() {
+        let config: Config = load();
+        let output: String = config.list_feeds();
+        assert_eq!(output, "0: https://archlinux.org/feeds/news/ - 0/5 * * * * *");
     }
 }

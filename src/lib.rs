@@ -67,6 +67,16 @@ pub struct Config {
     feeds: Vec<Feed>,
 }
 
+impl Config {
+    fn add_feed(&mut self, url: &str, schedule: &str) {
+        let new_feed = Feed {
+            link: url.to_string(),
+            schedule: schedule.to_string()
+        };
+        self.feeds.push(new_feed);
+    }
+}
+
 pub fn load() -> Config {
     let config: Config = toml::from_str(r#"
         feeds = [{link = "https://archlinux.org/feeds/news/",schedule = "0/5 * * * * *"}]
@@ -110,5 +120,13 @@ mod tests {
 
         assert_eq!(config.feeds[0].link, "https://archlinux.org/feeds/news/");
         assert_eq!(config.feeds[0].schedule, "0/5 * * * * *");
+    }
+    #[test]
+    fn add_feed_to_config() {
+        let mut config: Config = load();
+        let url = "https://feeds.npr.org/1001/rss.xml";
+        let schedule = "0/5 * * * * *";
+        config.add_feed(&url, &schedule);
+        assert_eq!(config.feeds[1].link, "https://feeds.npr.org/1001/rss.xml");
     }
 }

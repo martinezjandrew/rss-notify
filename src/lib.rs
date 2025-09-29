@@ -3,8 +3,12 @@ use rss::Channel;
 use notify_rust::Notification;
 use chrono::Utc;
 use html2text::from_read;
-use serde::Deserialize;
+use serde::{Serialize, Deserialize};
 use toml;
+use directories::ProjectDirs;
+use std::fs;
+use std::path::PathBuf;
+use std::path::Path;
 
 pub async fn get_feed(link: &str) -> Result<Channel, Box<dyn Error>> {
     let content = reqwest::get(link)
@@ -56,34 +60,34 @@ fn create_body(title: &str, description: &str) -> String {
     )
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Feed {
     link: String,
     schedule: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Config {
     feeds: Vec<Feed>,
 }
 
 impl Config {
-    fn add_feed(&mut self, url: &str, schedule: &str) {
+    pub fn add_feed(&mut self, url: &str, schedule: &str) {
         let new_feed = Feed {
             link: url.to_string(),
             schedule: schedule.to_string()
         };
         self.feeds.push(new_feed);
     }
-    fn remove_feed(&mut self, index: usize) -> Result<(), &'static str> {
-        if index >= self.feeds.len() && index < 0 {
+    pub fn remove_feed(&mut self, index: usize) -> Result<(), &'static str> {
+        if index >= self.feeds.len() {
             Err("Feed index is out of bounds.")
         } else {
             self.feeds.remove(index);
             Ok(())
         }
     }
-    fn list_feeds(self) -> String {
+    pub fn list_feeds(&self) -> String {
         let feed_iter = self.feeds.iter();
 
         let mut output = String::new();
@@ -91,18 +95,71 @@ impl Config {
         for (i, feed) in feed_iter.enumerate() {
             let line = format!("{}: {} - {}", i, &feed.link, &feed.schedule);
             output.push_str(&line);
+            output.push('\n');
         }
 
         output
     }
+
+    pub fn load(path: Option<&str>) -> Result<Self, Box<dyn Error>> {
+        let path = get_config_path(path);
+
+        if path.exists() {
+            let contents = fs::read_to_string(&path)?;
+            let config = toml::from_str(&contents)?;
+            Ok(config)
+        } else {
+            let config = Config::default();
+            create_config(&path, &config)?;
+            Ok(config)
+        }
+    }
+
+    pub fn save(&self, path: Option<&str>) -> Result<(), Box<dyn Error>> {
+        let path = get_config_path(path);
+
+        if path.exists() {
+            let toml_file = toml::to_string_pretty(self)?;
+            fs::write(&path, toml_file)?;
+        } else {
+            create_config(&path, self)?;
+        }
+        Ok(())
+    }
 }
 
-pub fn load() -> Config {
-    let config: Config = toml::from_str(r#"
-        feeds = [{link = "https://archlinux.org/feeds/news/",schedule = "0/5 * * * * *"}]
-    "#).unwrap();
+impl Default for Config {
+    fn default() -> Self {
+        Self {
+            feeds: vec![],
+        }
+    }
+}
 
-    config
+fn get_config_path(path: Option<&str>) -> PathBuf {
+    if let Some(p) = path {
+        let dir = PathBuf::from(p);
+        fs::create_dir_all(&dir).expect("Failed to create config directory.");
+        return dir.join("config.toml")
+    }
+
+    let dirs = ProjectDirs::from("com", "martinezjandrew", "rss-notify")
+        .expect("Unable to get config directory.");
+
+    let config_dir = dirs.config_dir();
+    fs::create_dir_all(config_dir).expect("Failed to create config directory.");
+
+    config_dir.join("config.toml")
+}
+
+fn create_config(path: &Path, config: &Config) -> Result<PathBuf, Box<dyn Error>> {
+    if path.exists() {
+        return Err(Box::new(std::io::Error::new(std::io::ErrorKind::AlreadyExists, "Config path already exists.")));
+    }
+
+    let toml_str = toml::to_string_pretty(&config)?;
+    fs::write(&path, toml_str)?;
+    Ok(path.to_path_buf())
 }
 
 // function will update the "last_read" item for a feed
@@ -135,34 +192,74 @@ mod tests {
         send_notify(&feed);
     }
     #[test]
-    fn load_config() {
-        let config: Config = load();
-
-        assert_eq!(config.feeds[0].link, "https://archlinux.org/feeds/news/");
-        assert_eq!(config.feeds[0].schedule, "0/5 * * * * *");
-    }
-    #[test]
     fn add_feed_to_config() {
-        let mut config: Config = load();
+        let mut config: Config = Config::default();
         let url = "https://feeds.npr.org/1001/rss.xml";
         let schedule = "0/5 * * * * *";
         config.add_feed(&url, &schedule);
-        assert_eq!(config.feeds[1].link, "https://feeds.npr.org/1001/rss.xml");
+        assert_eq!(config.feeds[0].link, "https://feeds.npr.org/1001/rss.xml");
     }
     #[test]
     fn remove_feed_from_config() {
-        let mut config: Config = load();
+        let mut config: Config = Config::default();
         let url = "https://feeds.npr.org/1001/rss.xml";
         let schedule = "0/5 * * * * *";
         config.add_feed(&url, &schedule);
-        assert_eq!(config.feeds.len(), 2);
-        config.remove_feed(1);
         assert_eq!(config.feeds.len(), 1);
+        config.remove_feed(0);
+        assert_eq!(config.feeds.len(), 0);
     }
     #[test]
     fn list_feeds() {
-        let config: Config = load();
+        let mut config: Config = Config::default();
+        let url = "https://feeds.npr.org/1001/rss.xml";
+        let schedule = "0/5 * * * * *";
+        config.add_feed(&url, &schedule);
         let output: String = config.list_feeds();
-        assert_eq!(output, "0: https://archlinux.org/feeds/news/ - 0/5 * * * * *");
+        assert_eq!(output.trim(), format!("0: {} - {}", url, schedule), "list feeds output mistmach");
+    }
+    #[test]
+    fn test_temp_config_path() {
+        let path = get_config_path(Some("./test-config"));
+        assert!(path.ends_with("config.toml"));
+    }
+    #[test]
+    fn test_temp_config_file() {
+        let config: Config = Config::load(Some("./test-config"))
+            .expect("Failed to load or create config");    
+        assert_eq!(config.feeds.len(), 0, "New config should have no feeds");
+    }
+    #[test]
+    fn add_to_and_remove_from_temp_config_file() {
+        let test_path = "./test-config";
+        let mut config = Config::load(Some(&test_path))
+            .expect("Failed to load or create config");
+
+        let url = "https://feeds.npr.org/1001/rss.xml";
+        let schedule = "0/5 * * * * *";
+
+        config.add_feed(url, schedule);
+        assert_eq!(config.feeds.len(), 1, "Config should have one feed after adding one feed.");
+
+        config.save(Some(&test_path))
+            .expect("Failed to save config");
+
+        let mut loaded_config = Config::load(Some(&test_path))
+            .expect("Failed to load config after save");
+
+        assert_eq!(loaded_config.feeds.len(), 1, "Loaded config should have one feed");
+
+        loaded_config.remove_feed(0)
+            .expect("Failed to remove feed");
+        
+        assert_eq!(loaded_config.feeds.len(), 0, "Config should have 0 feeds after removal");
+
+        loaded_config.save(Some(&test_path))
+            .expect("Failed to save config after removal");
+
+        let final_config = Config::load(Some(&test_path))
+            .expect("Failed to laod config after final save");
+
+        assert_eq!(final_config.feeds.len(), 0, "Final config should have 1 feed");
     }
 }

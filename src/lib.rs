@@ -1,20 +1,16 @@
-use std::error::Error;
-use rss::Channel;
-use notify_rust::Notification;
 use chrono::Utc;
-use html2text::from_read;
-use serde::{Serialize, Deserialize};
-use toml;
 use directories::ProjectDirs;
+use html2text::from_read;
+use notify_rust::Notification;
+use rss::Channel;
+use serde::{Deserialize, Serialize};
+use std::error::Error;
 use std::fs;
-use std::path::PathBuf;
 use std::path::Path;
+use std::path::PathBuf;
 
 pub async fn get_feed(link: &str) -> Result<Channel, Box<dyn Error>> {
-    let content = reqwest::get(link)
-        .await?
-        .bytes()
-        .await?;
+    let content = reqwest::get(link).await?.bytes().await?;
     let channel = Channel::read_from(&content[..])?;
     Ok(channel)
 }
@@ -27,9 +23,10 @@ pub fn send_notify(channel: &Channel) {
     let body = create_body(&feed_title, &description);
     let link = latest_item.expect("REASON").link().unwrap();
 
-    println!("Executed notification for \"{feed_title}\" at {time}",
+    println!(
+        "Executed notification for \"{feed_title}\" at {time}",
         feed_title = feed_title,
-        time = Utc::now() 
+        time = Utc::now()
     );
 
     Notification::new()
@@ -41,10 +38,8 @@ pub fn send_notify(channel: &Channel) {
         .wait_for_action(|action| match action {
             "default" => open::that(link).expect("REASON"),
             "__closed" => println!("the notification was closed"),
-            _ => ()
+            _ => (),
         });
-
-
 }
 
 fn create_body(title: &str, description: &str) -> String {
@@ -54,10 +49,7 @@ fn create_body(title: &str, description: &str) -> String {
         plain.push_str("...");
     }
 
-    format!(
-        "~~<i>{}</i>~~\n\n{}\n\nClick to read more 👉",
-        title, plain
-    )
+    format!("~~<i>{}</i>~~\n\n{}\n\nClick to read more 👉", title, plain)
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -75,7 +67,7 @@ impl Config {
     pub fn add_feed(&mut self, url: &str, schedule: &str) {
         let new_feed = Feed {
             link: url.to_string(),
-            schedule: schedule.to_string()
+            schedule: schedule.to_string(),
         };
         self.feeds.push(new_feed);
     }
@@ -130,9 +122,7 @@ impl Config {
 
 impl Default for Config {
     fn default() -> Self {
-        Self {
-            feeds: vec![],
-        }
+        Self { feeds: vec![] }
     }
 }
 
@@ -140,7 +130,7 @@ fn get_config_path(path: Option<&str>) -> PathBuf {
     if let Some(p) = path {
         let dir = PathBuf::from(p);
         fs::create_dir_all(&dir).expect("Failed to create config directory.");
-        return dir.join("config.toml")
+        return dir.join("config.toml");
     }
 
     let dirs = ProjectDirs::from("com", "martinezjandrew", "rss-notify")
@@ -154,7 +144,10 @@ fn get_config_path(path: Option<&str>) -> PathBuf {
 
 fn create_config(path: &Path, config: &Config) -> Result<PathBuf, Box<dyn Error>> {
     if path.exists() {
-        return Err(Box::new(std::io::Error::new(std::io::ErrorKind::AlreadyExists, "Config path already exists.")));
+        return Err(Box::new(std::io::Error::new(
+            std::io::ErrorKind::AlreadyExists,
+            "Config path already exists.",
+        )));
     }
 
     let toml_str = toml::to_string_pretty(&config)?;
@@ -175,9 +168,6 @@ pub fn load_data() -> String {
     data.push_str("NOT IMPLEMENTED YET!");
     data
 }
-
-
-
 
 #[cfg(test)]
 mod tests {
@@ -216,7 +206,11 @@ mod tests {
         let schedule = "0/5 * * * * *";
         config.add_feed(&url, &schedule);
         let output: String = config.list_feeds();
-        assert_eq!(output.trim(), format!("0: {} - {}", url, schedule), "list feeds output mistmach");
+        assert_eq!(
+            output.trim(),
+            format!("0: {} - {}", url, schedule),
+            "list feeds output mistmach"
+        );
     }
     #[test]
     fn test_temp_config_path() {
@@ -225,41 +219,57 @@ mod tests {
     }
     #[test]
     fn test_temp_config_file() {
-        let config: Config = Config::load(Some("./test-config"))
-            .expect("Failed to load or create config");    
+        let config: Config =
+            Config::load(Some("./test-config")).expect("Failed to load or create config");
         assert_eq!(config.feeds.len(), 0, "New config should have no feeds");
     }
     #[test]
     fn add_to_and_remove_from_temp_config_file() {
         let test_path = "./test-config";
-        let mut config = Config::load(Some(&test_path))
-            .expect("Failed to load or create config");
+        let mut config = Config::load(Some(&test_path)).expect("Failed to load or create config");
 
         let url = "https://feeds.npr.org/1001/rss.xml";
         let schedule = "0/5 * * * * *";
 
         config.add_feed(url, schedule);
-        assert_eq!(config.feeds.len(), 1, "Config should have one feed after adding one feed.");
+        assert_eq!(
+            config.feeds.len(),
+            1,
+            "Config should have one feed after adding one feed."
+        );
 
-        config.save(Some(&test_path))
+        config
+            .save(Some(&test_path))
             .expect("Failed to save config");
 
-        let mut loaded_config = Config::load(Some(&test_path))
-            .expect("Failed to load config after save");
+        let mut loaded_config =
+            Config::load(Some(&test_path)).expect("Failed to load config after save");
 
-        assert_eq!(loaded_config.feeds.len(), 1, "Loaded config should have one feed");
+        assert_eq!(
+            loaded_config.feeds.len(),
+            1,
+            "Loaded config should have one feed"
+        );
 
-        loaded_config.remove_feed(0)
-            .expect("Failed to remove feed");
-        
-        assert_eq!(loaded_config.feeds.len(), 0, "Config should have 0 feeds after removal");
+        loaded_config.remove_feed(0).expect("Failed to remove feed");
 
-        loaded_config.save(Some(&test_path))
+        assert_eq!(
+            loaded_config.feeds.len(),
+            0,
+            "Config should have 0 feeds after removal"
+        );
+
+        loaded_config
+            .save(Some(&test_path))
             .expect("Failed to save config after removal");
 
-        let final_config = Config::load(Some(&test_path))
-            .expect("Failed to laod config after final save");
+        let final_config =
+            Config::load(Some(&test_path)).expect("Failed to laod config after final save");
 
-        assert_eq!(final_config.feeds.len(), 0, "Final config should have 1 feed");
+        assert_eq!(
+            final_config.feeds.len(),
+            0,
+            "Final config should have 1 feed"
+        );
     }
 }

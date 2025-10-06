@@ -1,9 +1,10 @@
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use directories::ProjectDirs;
 use html2text::from_read;
 use notify_rust::Notification;
 use rss::Channel;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::error::Error;
 use std::fs;
 use std::path::Path;
@@ -61,6 +62,11 @@ pub struct Feed {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Config {
     feeds: Vec<Feed>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Data {
+    last_seen: HashMap<String, String>,
 }
 
 impl Config {

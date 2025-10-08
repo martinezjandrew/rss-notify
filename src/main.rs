@@ -1,11 +1,10 @@
-use tokio::time::{sleep_until, Instant, Duration};
+use rss_notify::config::Config;
+use tokio::time::{Duration, Instant, sleep_until};
 use tokio_cron_scheduler::{Job, JobScheduler};
-use rss_notify;
 
 #[tokio::main]
 async fn main() {
-
-    let config = rss_notify::Config::load(None).expect("Failed to load config");
+    let config = Config::load(None).expect("Failed to load config");
     println!("Loaded config: {:#?}", config);
     // let scheduler = JobScheduler::new().await.unwrap();
     //     // cron job runs every minute

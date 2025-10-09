@@ -4,6 +4,10 @@ use notify_rust::Notification;
 use rss::Channel;
 use std::error::Error;
 
+pub mod config;
+
+pub mod data;
+
 pub async fn get_feed(link: &str) -> Result<Channel, Box<dyn Error>> {
     let content = reqwest::get(link).await?.bytes().await?;
     let channel = Channel::read_from(&content[..])?;
@@ -45,24 +49,6 @@ fn create_body(title: &str, description: &str) -> String {
     }
 
     format!("~~<i>{}</i>~~\n\n{}\n\nClick to read more 👉", title, plain)
-}
-
-pub mod config;
-
-pub mod data;
-
-// function will update the "last_read" item for a feed
-pub fn save_data() -> String {
-    let mut data = String::new();
-    data.push_str("NOT IMPLEMENTED YET!");
-    data
-}
-
-// function will grab the "last_read" item from a feed
-pub fn load_data() -> String {
-    let mut data = String::new();
-    data.push_str("NOT IMPLEMENTED YET!");
-    data
 }
 
 #[cfg(test)]

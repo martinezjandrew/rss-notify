@@ -1,11 +1,14 @@
 use rss_notify::config::Config;
-use tokio::time::{Duration, Instant, sleep_until};
-use tokio_cron_scheduler::{Job, JobScheduler};
+use rss_notify::data::Data;
+// use tokio::time::{Duration, Instant, sleep_until};
+// use tokio_cron_scheduler::{Job, JobScheduler};
 
 #[tokio::main]
 async fn main() {
-    let config = Config::load(None).expect("Failed to load config");
-    println!("Loaded config: {:#?}", config);
+    let config: Config = Config::load(None).expect("Failed to load config");
+    println!("Loaded config:\n {:#?}", config);
+    let data: Data = Data::load(None).expect("Failed to load data");
+    println!("Loaded data:\n {:#?}", data);
     // let scheduler = JobScheduler::new().await.unwrap();
     //     // cron job runs every minute
     // scheduler

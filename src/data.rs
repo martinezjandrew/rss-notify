@@ -1,3 +1,5 @@
+use chrono::DateTime;
+use chrono::Local;
 use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -19,11 +21,13 @@ impl Data {
             None => String::new(),
         }
     }
-    pub fn update_last_seen(&mut self, feed: &str, date: &str) {
+
+    pub fn update_last_seen(&mut self, feed: &str) {
         let feed = String::from_str(feed).unwrap();
-        let date = String::from_str(date).unwrap();
+        let date = Local::now().to_rfc2822();
         self.last_seen.insert(feed, date);
     }
+
     pub fn load(path: Option<&str>) -> Result<Self, Box<dyn Error>> {
         let path = get_data_path(path);
 
@@ -76,7 +80,7 @@ fn create_data(path: &Path, data: &Data) -> Result<PathBuf, Box<dyn Error>> {
     }
 
     let toml_str = toml::to_string_pretty(&data)?;
-    fs::write(&path, toml_str)?;
+    fs::write(path, toml_str)?;
     Ok(path.to_path_buf())
 }
 
@@ -93,15 +97,19 @@ mod tests {
     fn test_insert_last_seen() {
         let mut data: Data =
             Data::load(Some("./test-data")).expect("Failed to load or create data");
-        data.update_last_seen("hello", "world");
+        data.update_last_seen("hello");
         assert_eq!(data.last_seen.len(), 1, "Just inserted a feed, should be 1");
-        assert_eq!(data.get_last_seen("hello"), "world", "Should be 'world'");
+        assert_eq!(
+            data.get_last_seen("hello"),
+            Local::now().to_rfc2822(),
+            "Should be the date"
+        );
     }
     #[test]
     fn test_insert_and_save_to_data() {
         let mut data: Data =
             Data::load(Some("./test-data")).expect("Failed to load or create data");
-        data.update_last_seen("hello", "world");
+        data.update_last_seen("hello");
         data.save(Some("./test-data")).expect("failed to save data");
 
         let data2: Data = Data::load(Some("./test-data")).expect("Failed to load or create data");

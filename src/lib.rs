@@ -53,17 +53,25 @@ fn create_body(title: &str, description: &str) -> String {
     format!("~~<i>{}</i>~~\n\n{}\n\nClick to read more 👉", title, plain)
 }
 
-pub fn init() {}
-
-pub fn initiate_data_from_config(config: config::Config) {
-    let mut data: Data = Data::load(Some("./test-data")).expect("Failed to load or create data");
-    let data_feeds = data.get_feeds();
-    for feed in config.feeds {
+pub fn initiate_data_from_config(
+    config: config::Config,
+    data_path: Option<&str>,
+) -> Result<(), Box<dyn Error>> {
+    let mut data: Data = Data::load(data_path).expect("Failed to load or create data");
+    let mut data_feeds = data.get_feeds();
+    for (idx, feed) in config.feeds.iter().enumerate() {
         if data_feeds.contains(&feed.link) {
+            data_feeds.swap_remove(idx);
             continue;
         };
         data.update_last_seen(&feed.link);
     }
+
+    for feed in data_feeds {
+        data.remove_last_seen(&feed);
+    }
+
+    data.save(data_path)
 }
 
 pub struct UnseenItems {
@@ -111,5 +119,29 @@ mod tests {
         let feed = get_feed(feed_link).await.unwrap();
 
         send_notify(&feed);
+    }
+
+    #[test]
+    fn test_initiate_config() {
+        let test_path = "./test-config";
+        let mut config =
+            config::Config::load(Some(test_path)).expect("Failed to load or create config");
+        config.clear();
+        config.add_feed("link1", "* * * * *");
+        assert_eq!(config.feeds.len(), 1, "Should have 1 feed");
+        config.save(Some(test_path)).unwrap();
+
+        initiate_data_from_config(config, Some("./test-data")).unwrap();
+        let data_path = Some("./test-data");
+        let data = data::Data::load(data_path).unwrap();
+
+        assert_eq!(data.get_feeds().len(), 1, "Should only have 1 feed");
+        assert_eq!(
+            data.get_feeds().first().unwrap(),
+            "link1",
+            "Should have link1"
+        );
+
+        data.save(data_path).unwrap();
     }
 }

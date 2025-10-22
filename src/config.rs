@@ -45,6 +45,10 @@ impl Config {
         output
     }
 
+    pub fn clear(&mut self) {
+        self.feeds.clear();
+    }
+
     pub fn load(path: Option<&str>) -> Result<Self, Box<dyn Error>> {
         let path = get_config_path(path);
 
@@ -194,5 +198,15 @@ mod tests {
             0,
             "Final config should have 1 feed"
         );
+    }
+
+    #[test]
+    fn test_clear_feeds() {
+        let test_path = "./test-config";
+        let mut config = Config::load(Some(test_path)).expect("Failed to load or create config");
+
+        config.clear();
+
+        assert_eq!(config.feeds.len(), 0, "Should be empty...")
     }
 }

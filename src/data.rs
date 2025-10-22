@@ -33,6 +33,10 @@ impl Data {
         self.last_seen.insert(feed, date);
     }
 
+    pub fn remove_last_seen(&mut self, feed: &str) {
+        self.last_seen.remove(feed);
+    }
+
     pub fn get_feeds(&self) -> Vec<String> {
         self.last_seen.keys().cloned().collect()
     }
@@ -157,5 +161,18 @@ mod tests {
         data.update_last_seen("hello");
         let feeds = data.get_feeds();
         assert!(!feeds.is_empty(), "Should get back one feed");
+    }
+
+    #[test]
+    fn test_remove_feed() {
+        let mut data: Data =
+            Data::load(Some("./test-data")).expect("Failed to load or create data");
+        data.clear();
+        data.update_last_seen("hello");
+        let feeds = data.get_feeds();
+        assert!(!feeds.is_empty(), "Should get back one feed");
+        data.remove_last_seen("hello");
+        let feeds = data.get_feeds();
+        assert!(feeds.is_empty(), "Should get empty now");
     }
 }

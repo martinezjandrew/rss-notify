@@ -115,6 +115,7 @@ mod tests {
     fn test_insert_last_seen() {
         let mut data: Data =
             Data::load(Some("./test-data")).expect("Failed to load or create data");
+        data.clear();
         data.update_last_seen("hello");
         assert_eq!(data.last_seen.len(), 1, "Just inserted a feed, should be 1");
         assert_eq!(
@@ -128,6 +129,7 @@ mod tests {
     fn test_insert_and_save_to_data() {
         let mut data: Data =
             Data::load(Some("./test-data")).expect("Failed to load or create data");
+        data.clear();
         data.update_last_seen("hello");
         data.save(Some("./test-data")).expect("failed to save data");
 
@@ -143,6 +145,7 @@ mod tests {
     fn test_clear_data() {
         let mut data: Data =
             Data::load(Some("./test-data")).expect("Failed to load or create data");
+        data.clear();
         data.update_last_seen("hello");
         assert_eq!(
             data.last_seen.len(),

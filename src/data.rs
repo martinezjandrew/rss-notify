@@ -33,8 +33,8 @@ impl Data {
         self.last_seen.insert(feed, date);
     }
 
-    pub fn get_feeds(self) -> Vec<String> {
-        self.last_seen.into_keys().collect()
+    pub fn get_feeds(&self) -> Vec<String> {
+        self.last_seen.keys().cloned().collect()
     }
 
     pub fn clear(&mut self) {

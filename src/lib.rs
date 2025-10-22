@@ -4,6 +4,8 @@ use notify_rust::Notification;
 use rss::Channel;
 use std::error::Error;
 
+use crate::data::Data;
+
 pub mod config;
 
 pub mod data;
@@ -49,6 +51,54 @@ fn create_body(title: &str, description: &str) -> String {
     }
 
     format!("~~<i>{}</i>~~\n\n{}\n\nClick to read more 👉", title, plain)
+}
+
+pub fn init() {}
+
+pub fn initiate_data_from_config(config: config::Config) {
+    let mut data: Data = Data::load(Some("./test-data")).expect("Failed to load or create data");
+    let data_feeds = data.get_feeds();
+    for feed in config.feeds {
+        if data_feeds.contains(&feed.link) {
+            continue;
+        };
+        data.update_last_seen(&feed.link);
+    }
+}
+
+pub struct UnseenItems {
+    date: String,
+    title: String,
+    link: String,
+}
+pub fn get_unseen_items(channel: &Channel) -> Result<Vec<UnseenItems>, Box<dyn Error>> {
+    // get last seen date from data file
+    // initiate array to hold unseen items in tuples: date, title, link
+    // loop through channel items
+    //     stop if item date is on or before last seen date
+    //     add item to unseen items array
+    //  return list of unseen items
+    let data = Data::load(None)?;
+    let link = &channel.link;
+    let last_seen = data.get_last_seen(link);
+    if last_seen.is_empty() {
+        panic!("No last_seen found.")
+    };
+    let mut unseen_items: Vec<UnseenItems> = vec![];
+    for item in &channel.items {
+        let pub_date = item.pub_date().unwrap_or("");
+        if *pub_date != last_seen {
+            break;
+        } else {
+            let unseen = UnseenItems {
+                date: pub_date.to_string(),
+                title: item.title().unwrap_or("").to_string(),
+                link: item.link().unwrap_or("").to_string(),
+            };
+            unseen_items.insert(0, unseen);
+        };
+    }
+    Ok(unseen_items)
 }
 
 #[cfg(test)]

@@ -54,7 +54,7 @@ impl Config {
 
         if path.exists() {
             let contents = fs::read_to_string(&path)?;
-            let config = toml::from_str(&contents)?;
+            let config = toml::from_str(&contents).expect("Failed to fit into the Config class");
             Ok(config)
         } else {
             let config = Config::default();
@@ -108,6 +108,7 @@ fn create_config(path: &Path, config: &Config) -> Result<PathBuf, Box<dyn Error>
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
     fn add_feed_to_config() {
         let mut config: Config = Config::default();
@@ -143,16 +144,21 @@ mod tests {
     }
     #[test]
     fn test_temp_config_path() {
-        let path = get_config_path(Some("./test-config"));
+        let path = get_config_path(Some("./test-temp-config-path"));
         assert!(path.ends_with("config.toml"));
+
+        std::fs::remove_dir_all(path).ok();
     }
     #[test]
     fn test_temp_config_file() {
-        assert!(Config::load(Some("./test-config")).is_ok());
+        let test_path = "./test-temp-config-file";
+        assert!(Config::load(Some(test_path)).is_ok());
+
+        std::fs::remove_dir_all(test_path).ok();
     }
     #[test]
     fn add_to_and_remove_from_temp_config_file() {
-        let test_path = "./test-config";
+        let test_path = "./test-add-to-and-remove-from-temp-config-file";
         let mut config = Config::load(Some(test_path)).expect("Failed to load or create config");
         config.clear();
 
@@ -195,17 +201,21 @@ mod tests {
         assert_eq!(
             final_config.feeds.len(),
             0,
-            "Final config should have 1 feed"
+            "Final config should have 0 feeds"
         );
+
+        std::fs::remove_dir_all(test_path).ok();
     }
 
     #[test]
     fn test_clear_feeds() {
-        let test_path = "./test-config";
+        let test_path = "./test-clear-feeds";
         let mut config = Config::load(Some(test_path)).expect("Failed to load or create config");
 
         config.clear();
 
-        assert_eq!(config.feeds.len(), 0, "Should be empty...")
+        assert_eq!(config.feeds.len(), 0, "Should be empty...");
+
+        std::fs::remove_dir_all(test_path).ok();
     }
 }

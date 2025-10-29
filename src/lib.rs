@@ -54,7 +54,7 @@ fn create_body(title: &str, description: &str) -> String {
 }
 
 pub fn initiate_data_from_config(
-    config: config::Config,
+    config: &config::Config,
     data_path: Option<&str>,
 ) -> Result<(), Box<dyn Error>> {
     let mut data: Data = Data::load(data_path).expect("Failed to load or create data");
@@ -74,40 +74,40 @@ pub fn initiate_data_from_config(
     data.save(data_path)
 }
 
-pub struct UnseenItems {
-    date: String,
-    title: String,
-    link: String,
-}
-pub fn get_unseen_items(channel: &Channel) -> Result<Vec<UnseenItems>, Box<dyn Error>> {
-    // get last seen date from data file
-    // initiate array to hold unseen items in tuples: date, title, link
-    // loop through channel items
-    //     stop if item date is on or before last seen date
-    //     add item to unseen items array
-    //  return list of unseen items
-    let data = Data::load(None)?;
-    let link = &channel.link;
-    let last_seen = data.get_last_seen(link);
-    if last_seen.is_empty() {
-        panic!("No last_seen found.")
-    };
-    let mut unseen_items: Vec<UnseenItems> = vec![];
-    for item in &channel.items {
-        let pub_date = item.pub_date().unwrap_or("");
-        if *pub_date != last_seen {
-            break;
-        } else {
-            let unseen = UnseenItems {
-                date: pub_date.to_string(),
-                title: item.title().unwrap_or("").to_string(),
-                link: item.link().unwrap_or("").to_string(),
-            };
-            unseen_items.insert(0, unseen);
-        };
-    }
-    Ok(unseen_items)
-}
+// pub struct UnseenItems {
+//     date: String,
+//     title: String,
+//     link: String,
+// }
+// pub fn get_unseen_items(channel: &Channel) -> Result<Vec<UnseenItems>, Box<dyn Error>> {
+//     // get last seen date from data file
+//     // initiate array to hold unseen items in tuples: date, title, link
+//     // loop through channel items
+//     //     stop if item date is on or before last seen date
+//     //     add item to unseen items array
+//     //  return list of unseen items
+//     let data = Data::load(None)?;
+//     let link = &channel.link;
+//     let last_seen = data.get_last_seen(link);
+//     if last_seen.is_empty() {
+//         panic!("No last_seen found.")
+//     };
+//     let mut unseen_items: Vec<UnseenItems> = vec![];
+//     for item in &channel.items {
+//         let pub_date = item.pub_date().unwrap_or("");
+//         if *pub_date != last_seen {
+//             break;
+//         } else {
+//             let unseen = UnseenItems {
+//                 date: pub_date.to_string(),
+//                 title: item.title().unwrap_or("").to_string(),
+//                 link: item.link().unwrap_or("").to_string(),
+//             };
+//             unseen_items.insert(0, unseen);
+//         };
+//     }
+//     Ok(unseen_items)
+// }
 
 #[cfg(test)]
 mod tests {
@@ -123,7 +123,7 @@ mod tests {
 
     #[test]
     fn test_initiate_config() {
-        let test_path = "./test-config";
+        let test_path = "./test-initiate-config";
         let mut config =
             config::Config::load(Some(test_path)).expect("Failed to load or create config");
         config.clear();
@@ -131,7 +131,7 @@ mod tests {
         assert_eq!(config.feeds.len(), 1, "Should have 1 feed");
         config.save(Some(test_path)).unwrap();
 
-        initiate_data_from_config(config, Some("./test-data")).unwrap();
+        initiate_data_from_config(&config, Some("./test-data")).unwrap();
         let data_path = Some("./test-data");
         let data = data::Data::load(data_path).unwrap();
 
@@ -143,5 +143,7 @@ mod tests {
         );
 
         data.save(data_path).unwrap();
+
+        std::fs::remove_dir_all(test_path).ok();
     }
 }

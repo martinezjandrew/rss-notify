@@ -131,9 +131,9 @@ mod tests {
         assert_eq!(config.feeds.len(), 1, "Should have 1 feed");
         config.save(Some(test_path)).unwrap();
 
-        initiate_data_from_config(&config, Some("./test-data")).unwrap();
-        let data_path = Some("./test-data");
-        let data = data::Data::load(data_path).unwrap();
+        let data_path = "./test-initiate-config-data";
+        initiate_data_from_config(&config, Some(data_path)).unwrap();
+        let data = data::Data::load(Some(data_path)).unwrap();
 
         assert_eq!(data.get_feeds().len(), 1, "Should only have 1 feed");
         assert_eq!(
@@ -142,8 +142,9 @@ mod tests {
             "Should have link1"
         );
 
-        data.save(data_path).unwrap();
+        data.save(Some(data_path)).unwrap();
 
         std::fs::remove_dir_all(test_path).ok();
+        std::fs::remove_dir_all(data_path).ok();
     }
 }

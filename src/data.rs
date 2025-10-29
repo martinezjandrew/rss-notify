@@ -107,15 +107,18 @@ mod tests {
 
     #[test]
     fn test_temp_data_path() {
-        let path = get_data_path(Some("./test-data"));
+        let data_path = "./test-temp-data-path";
+        let path = get_data_path(Some(data_path));
         assert!(path.ends_with("data.toml"));
+
+        std::fs::remove_dir_all(data_path).ok();
     }
 
     #[test]
     fn test_insert_last_seen() {
-        let mut data: Data =
-            Data::load(Some("./test-data")).expect("Failed to load or create data");
-        data.clear();
+        let path = "./test-insert-last-seen";
+        let mut data: Data = Data::load(Some(path)).expect("Failed to load or create data");
+
         data.update_last_seen("hello");
         assert_eq!(data.last_seen.len(), 1, "Just inserted a feed, should be 1");
         assert_eq!(
@@ -123,29 +126,33 @@ mod tests {
             Local::now().to_rfc2822(),
             "Should be the date"
         );
+
+        std::fs::remove_dir_all(path).ok();
     }
 
     #[test]
     fn test_insert_and_save_to_data() {
-        let mut data: Data =
-            Data::load(Some("./test-data")).expect("Failed to load or create data");
-        data.clear();
-        data.update_last_seen("hello");
-        data.save(Some("./test-data")).expect("failed to save data");
+        let path = "./test-insert-and-save-to-data";
+        let mut data: Data = Data::load(Some(path)).expect("Failed to load or create data");
 
-        let data2: Data = Data::load(Some("./test-data")).expect("Failed to load or create data");
+        data.update_last_seen("hello");
+        data.save(Some(path)).expect("failed to save data");
+
+        let data2: Data = Data::load(Some(path)).expect("Failed to load or create data");
         assert_eq!(
             data2.last_seen.len(),
             1,
             "Inserted a feed before save, should be 1"
         );
+
+        std::fs::remove_dir_all(path).ok();
     }
 
     #[test]
     fn test_clear_data() {
-        let mut data: Data =
-            Data::load(Some("./test-data")).expect("Failed to load or create data");
-        data.clear();
+        let path = "./test-clear-data";
+        let mut data: Data = Data::load(Some(path)).expect("Failed to load or create data");
+
         data.update_last_seen("hello");
         assert_eq!(
             data.last_seen.len(),
@@ -154,28 +161,35 @@ mod tests {
         );
         data.clear();
         assert!(data.last_seen.is_empty(), "Should be empty after clearing");
+
+        std::fs::remove_dir_all(path).ok();
     }
 
     #[test]
     fn test_get_feeds() {
-        let mut data: Data =
-            Data::load(Some("./test-data")).expect("Failed to load or create data");
-        data.clear();
+        let path = "./test-get-feeds";
+        let mut data: Data = Data::load(Some(path)).expect("Failed to load or create data");
+
         data.update_last_seen("hello");
         let feeds = data.get_feeds();
         assert!(!feeds.is_empty(), "Should get back one feed");
+
+        std::fs::remove_dir_all(path).ok();
     }
 
     #[test]
     fn test_remove_feed() {
-        let mut data: Data =
-            Data::load(Some("./test-data")).expect("Failed to load or create data");
-        data.clear();
+        let path = "./test-remove-feed";
+        let mut data: Data = Data::load(Some(path)).expect("Failed to load or create data");
+
         data.update_last_seen("hello");
         let feeds = data.get_feeds();
         assert!(!feeds.is_empty(), "Should get back one feed");
+
         data.remove_last_seen("hello");
         let feeds = data.get_feeds();
         assert!(feeds.is_empty(), "Should get empty now");
+
+        std::fs::remove_dir_all(path).ok();
     }
 }

@@ -144,10 +144,11 @@ mod tests {
     }
     #[test]
     fn test_temp_config_path() {
-        let path = get_config_path(Some("./test-temp-config-path"));
+        let test_path = "./test-temp-config-path";
+        let path = get_config_path(Some(test_path));
         assert!(path.ends_with("config.toml"));
 
-        std::fs::remove_dir_all(path).ok();
+        std::fs::remove_dir_all(test_path).ok();
     }
     #[test]
     fn test_temp_config_file() {

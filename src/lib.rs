@@ -287,4 +287,26 @@ mod tests {
         assert_eq!(unseen.len(), 1);
         assert_eq!(unseen.first().unwrap().title().unwrap(), "Brand New");
     }
+
+    #[tokio::test]
+    #[ignore] // prevents cargo test from running it by default
+    async fn test_actual_notification() {
+        // Build a fake RSS item
+        let mut item = Item::default();
+        item.set_title(Some("Test Notification Title".into()));
+        item.set_link(Some("https://example.com".into()));
+
+        // Build NotificationData
+        let notif = NotificationData {
+            title: "Mock Feed".into(),
+            unseen_items_count: 1,
+            latest_item: item,
+        };
+
+        // This should trigger a real desktop notification.
+        notif.send_notify().expect("Notification failed");
+
+        // Keep test alive for a moment so user can see it
+        std::thread::sleep(std::time::Duration::from_secs(3));
+    }
 }

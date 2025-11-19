@@ -1,4 +1,6 @@
 use chrono::Local;
+use chrono::prelude::DateTime;
+use croner::Cron;
 use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -12,37 +14,74 @@ use std::str::FromStr;
 pub type FeedLink = String;
 
 // date of last seen item from feed in rfc 2822 format
-pub type Date = String;
+#[derive(Serialize, Deserialize, Debug, Default, Clone)]
+pub struct FeedLinkData {
+    feed_link: FeedLink,
+    frequency: String,
+    last_seen: String,
+}
+
+impl FeedLinkData {
+    pub fn update_last_seen(&mut self) {
+        let date = Local::now().to_rfc2822();
+        self.last_seen = date
+    }
+
+    pub fn is_frequency_check_due(self) -> bool {
+        let cron = Cron::from_str(&self.frequency).expect("Should work....");
+        let seen_date = DateTime::parse_from_rfc2822(&self.last_seen).unwrap();
+        let next = cron.find_next_occurrence(&seen_date, false).unwrap();
+
+        let now = Local::now();
+
+        now >= next
+    }
+}
 
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct Data {
-    last_seen: HashMap<FeedLink, Date>,
+    link_map: HashMap<FeedLink, FeedLinkData>,
 }
 
 impl Data {
-    pub fn get_last_seen(self, feed: &str) -> String {
-        match self.last_seen.get(feed) {
-            Some(val) => val.to_string(),
-            None => String::new(),
+    pub fn get_link_map(&self, feed: &str) -> Option<FeedLinkData> {
+        self.link_map.get(feed).cloned()
+    }
+
+    pub fn insert_link_map(&mut self, feed_link: &str, frequency: &str) -> Option<&FeedLinkData> {
+        let feed_link_data = FeedLinkData {
+            feed_link: String::from(feed_link),
+            frequency: String::from(frequency),
+            last_seen: String::new(),
+        };
+
+        self.link_map
+            .insert(String::from(feed_link), feed_link_data);
+
+        self.link_map.get(feed_link)
+    }
+
+    pub fn update_link_map(&mut self, feed: &str) -> Option<&FeedLinkData> {
+        let feed_link_data = self.link_map.get_mut(feed);
+
+        if let Some(data) = feed_link_data {
+            data.update_last_seen();
+            self.link_map.get(feed)
+        } else {
+            None
         }
     }
 
-    pub fn update_last_seen(&mut self, feed: &str) {
-        let feed = String::from_str(feed).unwrap();
-        let date = Local::now().to_rfc2822();
-        self.last_seen.insert(feed, date);
-    }
-
-    pub fn remove_last_seen(&mut self, feed: &str) {
-        self.last_seen.remove(feed);
+    pub fn remove_link_map(&mut self, feed: &str) {
+        self.link_map.remove(feed);
     }
 
     pub fn get_feeds(&self) -> Vec<String> {
-        self.last_seen.keys().cloned().collect()
+        self.link_map.keys().cloned().collect()
     }
 
     pub fn clear(&mut self) {
-        self.last_seen.clear();
+        self.link_map.clear();
     }
 
     pub fn load(path: Option<&str>) -> Result<Self, Box<dyn Error>> {
@@ -103,6 +142,8 @@ fn create_data(path: &Path, data: &Data) -> Result<PathBuf, Box<dyn Error>> {
 
 #[cfg(test)]
 mod tests {
+    use chrono::Days;
+
     use super::*;
 
     #[test]
@@ -115,17 +156,13 @@ mod tests {
     }
 
     #[test]
-    fn test_insert_last_seen() {
+    fn test_insert_link_map() {
         let path = "./test-insert-last-seen";
         let mut data: Data = Data::load(Some(path)).expect("Failed to load or create data");
 
-        data.update_last_seen("hello");
-        assert_eq!(data.last_seen.len(), 1, "Just inserted a feed, should be 1");
-        assert_eq!(
-            data.get_last_seen("hello"),
-            Local::now().to_rfc2822(),
-            "Should be the date"
-        );
+        let _ = data.insert_link_map("https://test/", "* * 10 * *");
+
+        assert_eq!(data.link_map.len(), 1, "Just inserted a feed, should be 1");
 
         std::fs::remove_dir_all(path).ok();
     }
@@ -135,12 +172,13 @@ mod tests {
         let path = "./test-insert-and-save-to-data";
         let mut data: Data = Data::load(Some(path)).expect("Failed to load or create data");
 
-        data.update_last_seen("hello");
+        let _ = data.insert_link_map("https://test/", "* * 10 * *");
+
         data.save(Some(path)).expect("failed to save data");
 
         let data2: Data = Data::load(Some(path)).expect("Failed to load or create data");
         assert_eq!(
-            data2.last_seen.len(),
+            data2.link_map.len(),
             1,
             "Inserted a feed before save, should be 1"
         );
@@ -153,14 +191,15 @@ mod tests {
         let path = "./test-clear-data";
         let mut data: Data = Data::load(Some(path)).expect("Failed to load or create data");
 
-        data.update_last_seen("hello");
+        let _ = data.insert_link_map("https://test/", "* * 10 * *");
+
         assert_eq!(
-            data.last_seen.len(),
+            data.link_map.len(),
             1,
             "Inserted a feed before save, should be 1"
         );
         data.clear();
-        assert!(data.last_seen.is_empty(), "Should be empty after clearing");
+        assert!(data.link_map.is_empty(), "Should be empty after clearing");
 
         std::fs::remove_dir_all(path).ok();
     }
@@ -170,7 +209,7 @@ mod tests {
         let path = "./test-get-feeds";
         let mut data: Data = Data::load(Some(path)).expect("Failed to load or create data");
 
-        data.update_last_seen("hello");
+        let _ = data.insert_link_map("https://test/", "* * 10 * *");
         let feeds = data.get_feeds();
         assert!(!feeds.is_empty(), "Should get back one feed");
 
@@ -182,14 +221,29 @@ mod tests {
         let path = "./test-remove-feed";
         let mut data: Data = Data::load(Some(path)).expect("Failed to load or create data");
 
-        data.update_last_seen("hello");
+        let _ = data.insert_link_map("https://test/", "* * 10 * *");
         let feeds = data.get_feeds();
         assert!(!feeds.is_empty(), "Should get back one feed");
 
-        data.remove_last_seen("hello");
+        data.remove_link_map("https://test/");
         let feeds = data.get_feeds();
         assert!(feeds.is_empty(), "Should get empty now");
 
         std::fs::remove_dir_all(path).ok();
+    }
+
+    #[test]
+    fn test_if_time_to_check() {
+        let now = Local::now();
+        let sample_last_seen = now.checked_sub_days(Days::new(10));
+        let sample = FeedLinkData {
+            feed_link: String::from("https://test.com/"),
+            frequency: String::from("* * 10 * *"),
+            last_seen: sample_last_seen.unwrap().to_rfc2822(),
+        };
+        assert!(
+            sample.is_frequency_check_due(),
+            "Today is 10 days from 10 days ago..."
+        );
     }
 }

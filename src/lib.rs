@@ -2,12 +2,9 @@ use chrono::Utc;
 use html2text::from_read;
 use notify_rust::Notification;
 use rss::Channel;
-use std::error::Error;
-
-use crate::data::Data;
+use std::{collections::HashSet, error::Error};
 
 pub mod config;
-
 pub mod data;
 
 pub async fn get_feed(link: &str) -> Result<Channel, Box<dyn Error>> {
@@ -57,57 +54,24 @@ pub fn initiate_data_from_config(
     config: &config::Config,
     data_path: Option<&str>,
 ) -> Result<(), Box<dyn Error>> {
-    let mut data: Data = Data::load(data_path).expect("Failed to load or create data");
-    let mut data_feeds = data.get_feeds();
-    for (idx, feed) in config.feeds.iter().enumerate() {
-        if data_feeds.contains(&feed.link) {
-            data_feeds.swap_remove(idx);
+    let mut data: data::Data = data::Data::load(data_path).expect("Failed to load or create data");
+
+    let mut present_feeds: HashSet<String> = data.get_feeds().into_iter().collect();
+
+    for feed in &config.feeds {
+        if present_feeds.remove(&feed.link) {
             continue;
         };
-        data.update_last_seen(&feed.link);
+
+        data.insert_link_map(&feed.link, &feed.schedule);
     }
 
-    for feed in data_feeds {
-        data.remove_last_seen(&feed);
+    for obsolete in present_feeds {
+        data.remove_link_map(&obsolete);
     }
 
     data.save(data_path)
 }
-
-// pub struct UnseenItems {
-//     date: String,
-//     title: String,
-//     link: String,
-// }
-// pub fn get_unseen_items(channel: &Channel) -> Result<Vec<UnseenItems>, Box<dyn Error>> {
-//     // get last seen date from data file
-//     // initiate array to hold unseen items in tuples: date, title, link
-//     // loop through channel items
-//     //     stop if item date is on or before last seen date
-//     //     add item to unseen items array
-//     //  return list of unseen items
-//     let data = Data::load(None)?;
-//     let link = &channel.link;
-//     let last_seen = data.get_last_seen(link);
-//     if last_seen.is_empty() {
-//         panic!("No last_seen found.")
-//     };
-//     let mut unseen_items: Vec<UnseenItems> = vec![];
-//     for item in &channel.items {
-//         let pub_date = item.pub_date().unwrap_or("");
-//         if *pub_date != last_seen {
-//             break;
-//         } else {
-//             let unseen = UnseenItems {
-//                 date: pub_date.to_string(),
-//                 title: item.title().unwrap_or("").to_string(),
-//                 link: item.link().unwrap_or("").to_string(),
-//             };
-//             unseen_items.insert(0, unseen);
-//         };
-//     }
-//     Ok(unseen_items)
-// }
 
 #[cfg(test)]
 mod tests {

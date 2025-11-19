@@ -6,7 +6,6 @@ description = "Schedule system notifications for your favorite RSS feeds."
 
 [dependencies]
 tokio = { version = "1", features = ["full"] }
-tokio-cron-scheduler = "0.14"
 chrono = "0.4"
 notify-rust = "4"
 rss = "2"
@@ -16,3 +15,4 @@ html2text = "0.15.5"
 toml = "0.9.7"
 serde = "1.0.226"
 directories = "6.0.0"
+croner = "3.0.1"

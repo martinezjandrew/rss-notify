@@ -36,6 +36,33 @@ impl FeedLinkData {
 
         now >= next
     }
+
+    pub fn feed_link(&self) -> Option<&str> {
+        Some(&self.feed_link)
+    }
+
+    pub fn frequency(&self) -> Option<&str> {
+        Some(&self.frequency)
+    }
+
+    pub fn last_seen(&self) -> Option<&str> {
+        Some(&self.last_seen)
+    }
+    pub fn new_for_testing(link: &str, last_seen: &str) -> Self {
+        Self {
+            feed_link: link.into(),
+            frequency: "* * * * *".into(),
+            last_seen: String::from(last_seen),
+        }
+    }
+
+    pub fn new(feed_link: String, frequency: String, last_seen: String) -> Self {
+        Self {
+            feed_link,
+            frequency,
+            last_seen,
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Default)]

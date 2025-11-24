@@ -14,8 +14,9 @@ pub async fn get_feed(link: &str) -> Result<Channel, Box<dyn Error>> {
     Ok(channel)
 }
 
-pub fn is_item_unseen(item: &Item, last_seen: &str) -> Result<bool, chrono::ParseError> {
-    let pub_date = item.pub_date().unwrap();
+pub fn is_item_unseen(pub_date: &str, last_seen: &str) -> Result<bool, chrono::ParseError> {
+    let pub_date = pub_date.trim();
+    let last_seen = last_seen.trim();
     let formatted_pub_date = DateTime::parse_from_rfc2822(pub_date)?;
     let formatted_last_seen = DateTime::parse_from_rfc2822(last_seen)?;
 
@@ -26,10 +27,26 @@ pub async fn check_items(items: &[Item], last_seen: &str) -> Result<Vec<Item>, B
     let mut unseen_items: Vec<Item> = vec![];
 
     for item in items {
-        if is_item_unseen(item, last_seen).is_ok_and(|x| x) {
-            unseen_items.push(item.clone());
-        } else {
-            continue;
+        let pub_date = item.pub_date();
+        match pub_date {
+            Some(date) => {
+                let is_unseen = is_item_unseen(date, last_seen);
+                match is_unseen {
+                    Ok(unseen) => {
+                        if unseen {
+                            unseen_items.push(item.clone());
+                        } else {
+                            break;
+                        }
+                    }
+                    Err(e) => {
+                        println!("Someting went wrong: {}", e);
+                    }
+                }
+            }
+            None => {
+                println!("Warning!: Item {} has no date.", item.link().unwrap());
+            }
         }
     }
 
@@ -80,11 +97,14 @@ impl NotificationData {
     }
 }
 
-pub async fn check_all_feeds_and_notify(feeds: &[FeedLinkData]) -> Result<(), Box<dyn Error>> {
+pub async fn check_all_feeds_and_notify(
+    feeds: &[FeedLinkData],
+) -> Result<Vec<&str>, Box<dyn Error>> {
     let mut notifications: Vec<NotificationData> = Vec::new();
+    let mut unseen_feeds: Vec<&str> = Vec::new();
 
     for feed in feeds {
-        let feed_link = feed.feed_link().unwrap_or("");
+        let feed_link = feed.feed_link();
         let channel = match get_feed(feed_link).await {
             Ok(c) => c,
             Err(e) => {
@@ -98,13 +118,14 @@ pub async fn check_all_feeds_and_notify(feeds: &[FeedLinkData]) -> Result<(), Bo
             continue;
         }
 
-        let last_seen = feed.last_seen().unwrap_or("");
+        let last_seen = feed.last_seen();
         let unseen = check_items(items, last_seen).await?;
 
         if unseen.is_empty() {
             continue;
         }
 
+        unseen_feeds.push(feed.feed_link());
         let latest_item = unseen.last().unwrap().clone();
 
         notifications.push(NotificationData {
@@ -118,7 +139,7 @@ pub async fn check_all_feeds_and_notify(feeds: &[FeedLinkData]) -> Result<(), Bo
         notify.send_notify()?;
     }
 
-    Ok(())
+    Ok(unseen_feeds)
 }
 
 pub fn initiate_data_from_config(
@@ -280,7 +301,7 @@ mod tests {
             String::from("Wed, 20 Nov 2024 10:00:00 +0000"),
         );
 
-        let unseen = check_items(channel.items(), feed_data.last_seen().unwrap_or(""))
+        let unseen = check_items(channel.items(), feed_data.last_seen())
             .await
             .unwrap();
 

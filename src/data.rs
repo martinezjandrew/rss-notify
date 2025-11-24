@@ -5,6 +5,7 @@ use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::error::Error;
+use std::fmt;
 use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
@@ -27,8 +28,11 @@ impl FeedLinkData {
         self.last_seen = date
     }
 
-    pub fn is_frequency_check_due(self) -> bool {
+    pub fn is_frequency_check_due(&mut self) -> bool {
         let cron = Cron::from_str(&self.frequency).expect("Should work....");
+        if self.last_seen.is_empty() {
+            self.update_last_seen();
+        }
         let seen_date = DateTime::parse_from_rfc2822(&self.last_seen).unwrap();
         let next = cron.find_next_occurrence(&seen_date, false).unwrap();
 
@@ -37,16 +41,16 @@ impl FeedLinkData {
         now >= next
     }
 
-    pub fn feed_link(&self) -> Option<&str> {
-        Some(&self.feed_link)
+    pub fn feed_link(&self) -> &str {
+        &self.feed_link
     }
 
-    pub fn frequency(&self) -> Option<&str> {
-        Some(&self.frequency)
+    pub fn frequency(&self) -> &str {
+        &self.frequency
     }
 
-    pub fn last_seen(&self) -> Option<&str> {
-        Some(&self.last_seen)
+    pub fn last_seen(&self) -> &str {
+        &self.last_seen
     }
     pub fn new_for_testing(link: &str, last_seen: &str) -> Self {
         Self {
@@ -65,22 +69,42 @@ impl FeedLinkData {
     }
 }
 
+impl fmt::Display for FeedLinkData {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "{},\t{},\t{}",
+            self.feed_link, self.frequency, self.last_seen
+        )
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct Data {
+    #[serde(default)]
     link_map: HashMap<FeedLink, FeedLinkData>,
 }
 
 impl Data {
-    pub fn get_link_map(&self, feed: &str) -> Option<FeedLinkData> {
-        self.link_map.get(feed).cloned()
+    pub fn link_map(&self) -> &HashMap<FeedLink, FeedLinkData> {
+        &self.link_map
+    }
+    pub fn get_link_map(&self, feed: &str) -> Option<&FeedLinkData> {
+        self.link_map.get(feed)
+    }
+
+    pub fn get_all_feed_link_data(&self) -> Vec<FeedLinkData> {
+        self.link_map.values().cloned().collect()
     }
 
     pub fn insert_link_map(&mut self, feed_link: &str, frequency: &str) -> Option<&FeedLinkData> {
-        let feed_link_data = FeedLinkData {
+        let mut feed_link_data = FeedLinkData {
             feed_link: String::from(feed_link),
             frequency: String::from(frequency),
             last_seen: String::new(),
         };
+
+        feed_link_data.update_last_seen();
 
         self.link_map
             .insert(String::from(feed_link), feed_link_data);
@@ -263,7 +287,7 @@ mod tests {
     fn test_if_time_to_check() {
         let now = Local::now();
         let sample_last_seen = now.checked_sub_days(Days::new(10));
-        let sample = FeedLinkData {
+        let mut sample = FeedLinkData {
             feed_link: String::from("https://test.com/"),
             frequency: String::from("* * 10 * *"),
             last_seen: sample_last_seen.unwrap().to_rfc2822(),

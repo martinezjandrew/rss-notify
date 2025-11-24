@@ -55,12 +55,17 @@ impl Config {
         if path.exists() {
             let contents = fs::read_to_string(&path)?;
             let config = toml::from_str(&contents).expect("Failed to fit into the Config class");
-            Ok(config)
-        } else {
-            let config = Config::default();
-            create_config(&path, &config)?;
-            Ok(config)
+            return Ok(config);
         }
+
+        let default = Config {
+            feeds: vec![Feed {
+                link: "https://archlinux.org/news/".into(),
+                schedule: "* * * * *".into(),
+            }],
+        };
+        create_config(&path, &default)?;
+        Ok(default)
     }
 
     pub fn save(&self, path: Option<&str>) -> Result<(), Box<dyn Error>> {

@@ -10,6 +10,7 @@ enum ArgumentOptions {
     Add,
     Remove,
     List,
+    Help,
 }
 
 impl ArgumentOptions {
@@ -19,6 +20,7 @@ impl ArgumentOptions {
             ArgumentOptions::Add => run_add(args, data).expect("WHAT"),
             ArgumentOptions::Remove => run_remove(args, data).expect("WHAT"),
             ArgumentOptions::List => run_list(data),
+            ArgumentOptions::Help => run_help(),
         }
     }
 }
@@ -61,6 +63,29 @@ fn run_remove(args: &[String], data: &mut Data) -> Result<(), String> {
     Ok(())
 }
 
+fn run_help() {
+    println!(
+        r#"Available commands:
+
+        check
+            Checks if any subscribed feed has unseen items.
+
+        list
+            View all subscribed feeds.
+
+        add <link> <frequency>
+            Add a new feed to the config.
+            Arguments:
+                link    The RSS/Atom feed URL.
+                frequency   How often to check the feed in cron-like format (e.g., \"* * * * *\")
+
+        remove <link>
+            Remove a feed from the config.
+            Arguments:
+                link    The RSS/Atom feed URL."#
+    )
+}
+
 struct Argument {
     specified_option: ArgumentOptions,
 }
@@ -78,6 +103,7 @@ impl Argument {
             "add" => ArgumentOptions::Add,
             "remove" => ArgumentOptions::Remove,
             "list" => ArgumentOptions::List,
+            "help" => ArgumentOptions::Help,
             _ => return Err(format!("Invalid command: {}", arg)),
         };
 

@@ -4,20 +4,31 @@ Schedule system notifications for your favorite RSS feeds!
 
 <img width="313" height="170" alt="image" src="https://github.com/user-attachments/assets/890f655d-20da-4d8b-927b-c2b64c473f8d" />
 
-
 Created by: Andrew Martinez
 
 ## Description
 
-rss-notify is a Rust program that runs as a background daemon and sends system notifications for the latest items from your chosen RSS feeds, according to a schedule you define.
+`rss-notify` is a lightweight RSS notification tool with the ability to check your subscribed feeds and can alert you when new items are available.
+
+It supports customizable check intervals per feed, tracks what you've already seen, and integrates with desktop notifications so you never miss updates.
+
+Designed to be minimal, fast, and easy to configure using a simple TOML file.
+
+IT is designed to be run externally - I will personally call it during my startup script.
 
 ## Status
 
-Currently in a **proof-of-concept** state. This version can fetch the latest item from the Arch-Wiki News RSS feed and display it as a system notification. Future versions will support multiple feeds, custom schedules, and more advanced features.
+`Version 0.5.0` -> Using the CLI, you can add, remove, view feeds from the config and you can check if any feed has new items based off your requested frequency.
 
 ## Features (Planned)
 
-- Support for multiple RSS feeds
-- Configurable notification schedule
-- Cross-platform system notifications
-- Option to mark items as read or ignored
+- Support for multiple RSS feeds - Done ✅
+- Configurable notification schedule - Done ✅
+- Cross-platform system notifications - Done ✅
+- Option to mark items as read or ignored - WIP
+
+### Next Steps
+
+- More comments
+- Improved error handling
+- Ability to see the list off unseen items within the CLI with the URL to view them from the browser

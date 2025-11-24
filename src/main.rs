@@ -1,8 +1,8 @@
 use std::env;
 
 use rss_notify::check_all_feeds_and_notify;
-use rss_notify::config::Config;
-use rss_notify::data::{self, Data};
+// use rss_notify::config::Config;
+use rss_notify::data::Data;
 
 #[derive(Debug)]
 enum ArgumentOptions {
@@ -27,10 +27,16 @@ impl ArgumentOptions {
 
 async fn run_check(data: &mut Data) -> Result<(), String> {
     let feed_link_data_list = data.get_all_feed_link_data();
-    let unseen_feeds = check_all_feeds_and_notify(&feed_link_data_list)
-        .await
-        .expect("BRUH");
-    for feed in unseen_feeds {
+    let unseen_feeds = check_all_feeds_and_notify(&feed_link_data_list).await;
+
+    let unseen_feeds: Vec<&str> = match unseen_feeds {
+        Ok(feeds) => feeds,
+        Err(e) => {
+            return Err(format!("Error Checking: {}", e));
+        }
+    };
+
+    for feed in &unseen_feeds {
         data.update_link_map(feed);
     }
 
@@ -41,7 +47,7 @@ async fn run_check(data: &mut Data) -> Result<(), String> {
 fn run_list(data: &Data) {
     let data_map = data.link_map();
 
-    for (_, feed_link_data) in data_map {
+    for feed_link_data in data_map.keys() {
         println!("{}", feed_link_data);
     }
 }
@@ -115,7 +121,7 @@ impl Argument {
 
 #[tokio::main]
 async fn main() {
-    let config: Config = Config::load(None).expect("Failed to load config");
+    // let config: Config = Config::load(None).expect("Failed to load config");
     let mut data: Data = Data::load(None).expect("Failed to load data");
 
     let args: Vec<String> = env::args().collect();
